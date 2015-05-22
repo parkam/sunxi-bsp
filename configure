@@ -3,7 +3,7 @@
 set -e
 if [ ! -d sunxi-boards/sys_config/ ]; then
 	git submodule init
-	sed -i 's/parkam/linux-sunxi/g' .git/config
+	#sed -i 's/parkam/linux-sunxi/g' .git/config
 	git submodule update sunxi-boards
 fi
 
