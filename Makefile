@@ -101,7 +101,7 @@ update:
 
 %/.git:
 	$(Q)git submodule init
-	$(Q)git submodule update $* --depth=1
+	$(Q)git submodule update --depth=1 $* 
 
 help:
 	@echo ""
