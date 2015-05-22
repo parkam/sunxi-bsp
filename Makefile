@@ -36,6 +36,7 @@ $(U_CONFIG_H): u-boot-sunxi/.git
 
 u-boot: $(U_CONFIG_H)
 	$(Q)$(MAKE) -C u-boot-sunxi all O=$(U_O_PATH) CROSS_COMPILE=$(CROSS_COMPILE) -j$J
+	#patch -p1 -d u-boot-sunxi < patches/uboot-delay0.patch
 
 ## linux
 $(K_DOT_CONFIG): linux-sunxi/.git
@@ -100,7 +101,7 @@ update:
 
 %/.git:
 	$(Q)git submodule init
-	$(Q)git submodule update $*
+	$(Q)git submodule update $* --depth=1
 
 help:
 	@echo ""
