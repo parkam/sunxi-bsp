@@ -19,13 +19,15 @@ generate_board_mk() {
 	local board="${1%-android}" android= soc=
 
 	[ "$board" = "$1" ] || android=yes
+	
 	soc=$(ls -1 sunxi-boards/sys_config/*/$board.fex 2> /dev/null | cut -d/ -f3)
 
 	cat <<-EOT
 	BOARD=$board
 	ANDROID=$android
 	SOC=$soc
-	UBOOT_CONFIG=$board
+	# thanks http://stackoverflow.com/a/12420486
+	UBOOT_CONFIG=`echo "$board" | sed 's/\(.\)/\U\1/'`
 	EOT
 
 	case "$soc" in

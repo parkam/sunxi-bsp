@@ -35,8 +35,9 @@ $(U_CONFIG_H): u-boot-sunxi/.git
 	$(Q)$(MAKE) -C u-boot-sunxi $(UBOOT_CONFIG)_config O=$(U_O_PATH) CROSS_COMPILE=$(CROSS_COMPILE) -j$J
 
 u-boot: $(U_CONFIG_H)
+	-patch --forward -p1 -d u-boot-sunxi < patches/uboot-delay0.patch || echo "Already patched...."
+	
 	$(Q)$(MAKE) -C u-boot-sunxi all O=$(U_O_PATH) CROSS_COMPILE=$(CROSS_COMPILE) -j$J
-	#patch -p1 -d u-boot-sunxi < patches/uboot-delay0.patch
 
 ## linux
 $(K_DOT_CONFIG): linux-sunxi/.git
