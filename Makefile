@@ -5,6 +5,7 @@
 SUDO=sudo
 CROSS_COMPILE=arm-linux-gnueabihf-
 OUTPUT_DIR=$(CURDIR)/output
+FILEDISK_IMG=$(OUTPUT_DIR)/filedisk.img
 BUILD_PATH=$(CURDIR)/build
 ROOTFS?=norootfs
 ROOTFS_BASENAME=$(basename $(basename $(ROOTFS)))
@@ -87,6 +88,35 @@ hwpack-install: $(HWPACK)
 	$(Q)[ -s $(SD_CARD) ] || echo "Define SD_CARD variable"
 	$(Q)$(SUDO) scripts/sunxi-media-create.sh $(SD_CARD) $(HWPACK) $(ROOTFS)
 
+
+MNTBOOT="/tmp/mnt_boot"
+MNTROOT="/tmp/mnt_root"
+HWPACKDIR="/tmp/hwpack"
+filedisk:# $(HWPACK)
+    
+	scripts/build.sh test_for_requirements
+	
+	#@echo "Creating file disk image $(FILEDISK_IMG)"
+	# create the image-file
+	#dd if=/dev/zero of=$(FILEDISK_IMG) bs=1M count=1K
+	
+	#scripts/build.sh partition_disk $(FILEDISK_IMG)
+	#$(Q)$(SUDO) scripts/build.sh format_disk $(FILEDISK_IMG)
+
+	mkdir -p $(MNTBOOT)
+	mkdir -p $(MNTROOT)
+	
+ 	$(Q)$(SUDO) scripts/build.sh loop_mount_disk $(FILEDISK_IMG) $(MNTBOOT) $(MNTROOT)
+	
+ 	$(Q)$(SUDO) scripts/build.sh extract $(HWPACK) $(HWPACKDIR)
+	
+ 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
+ 	$(Q)$(SUDO) scripts/build.sh install_uboot_spl $(HWPACK_DIR/bootloader/u-boot-sunxi-with-spl.bin)
+ 	
+ 	$(Q)$(SUDO) scripts/build.sh copy_data
+	
+	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
+	
 libs: cedarx-libs/.git
 
 update:

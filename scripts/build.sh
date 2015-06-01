@@ -71,6 +71,9 @@ format_disk()
 	return 1;
 }
 
+#
+# usage:
+# loop_mount_disk <filedisk-image> <boot-mount-point> <root-mount-point>
 loop_mount_disk()
 {
 	l_pnode=""
@@ -110,61 +113,90 @@ loop_mount_disk()
 	
 }
 
+#
+# usage:
+# extract <input-file> <target-directory>
+extract()
+{
+	
+	local f=$(readlink -f "$1")
+	echo "Extracting $1 into $2"
+
+	mkdir -p "$2"
+	cd "$2"
+	case "$f" in
+	*.tar.bz2|*.tbz2)
+		tar xjpf "$f"
+		;;
+	*.tar.gz|*.tgz)
+		tar xzpf "$f"
+		;;
+	*.7z|*.lzma)
+		7z x "$f"
+		;;
+	*.tar.xz)
+		tar xJpf "$f"
+		;;
+	*)
+		die "$f: unknown file extension"
+		;;
+	esac
+	cd - > /dev/null
+}
+
+
+
 umount_delete_loop_device()
 {
 
-	declare -a local loop_devices;
-	declare -a local  filtered_devices; #device files that can only be associated with disk file
-	declare -a local possible_device_nodes; #nodes that were setup for mounting
-	declare -a local mounted_device_nodes; #nodes that were mounted
-	declare -a local to_unmount;
-	local file_disk
-	file_disk=$1 
-	#search for all loop devices
-	
-	filtered_devices=($( kpartx -l $file_disk  | awk '{print $1 }' | grep 'loop[0-9]p[0-9]'))
-	loop_devices=($( losetup -a | grep "/dev/mapper" )) #get all loop devices in the system
-	mounted_device_nodes=($( cat /proc/mounts | grep "/dev/loop" | awk '{print $1}'  ))
+	declare -a loop_devices;
+	declare -a unmounted_loops;
+	declare -a difference;
+	declare -a devices_of_interest
 
-	#check whether mounted nodes in loop devices belong to our file
+	mounted_loops=($( cat /proc/mounts | awk '/\/dev\/loop/  {print $1}'  ))
+	loop_devices=$( losetup -a | grep "/dev/mapper/") 
+	device_postfix=($( losetup -a | grep "/dev/loop"  | grep $1 | awk 'gsub(":","") {print $1} ' | awk 'gsub("/dev/","")' ))
 	
 
-	
-	for loop_device in ${filtered_devices[@]}; do
-		for node in ${mounted_device_nodes[@]}; do
-			echo "node $node"			
-			temp=$( losetup -a | grep "/dev/mapper/$loop_device" | awk '{print $1}' );
-			temp=${temp%":"}
-			echo "temp $temp"
-			if [[ $temp == $node ]];then
-				to_unmount[${#to_unmount[@]}]=$temp;
-				echo "found node $temp"
-				break;
-			fi
-		done	
-	done
-	
-	if [[ ${#to_unmount[@]} == 0 ]] &&  $( losetup -a | grep $1 &> /dev/null ) ; then
-		echo "No devices to unmount";
+	if [ "$device_postfix" = "" ];then
+		echo "";
+		return 0;
 	fi
 
-	for node in  ${to_unmount[@]}; do
-			echo "unmounting device $node";	
-			umount $node	
+	mapping=($( ls /dev/mapper | grep $device_postfix ))
+	found=0
+
+	for device in ${mapping[@]};do 
+		if [ -z $device ] ; then 
+			echo "empty";
+			continue;
+		fi
+		to_search=($(losetup -a | grep "$device" | awk 'gsub(":","") {print $1} '))
+		
+		
+		
+		for x in ${mounted_loops[@]};do
+			if [ "$x" = "$to_search" ]; then
+				umount $x
+				found=1
+			fi
+		done
+		
 	done
 	
-	if  [[ ${#to_unmount[@]} > 0 ]] || $( losetup -a | grep $1 &> /dev/null )  ; then
+	if [[ $found == 1 ]]; then
 		echo "Deleting loop devices for $1"
 		sleep 1
 		kpartx -sd $1
-	fi
+	fi	
 		
 		
 }
 
 is_file_loop_setup()
 {
-	if $( losetup -a | grep $1 &> /dev/null  ) ; then
+	if $( losetup -j  $1 &> /dev/null  ) ; then
 		return 0;
 	else
 		return 1;
@@ -297,7 +329,8 @@ check_if_filedisk_mounted()
 
 
 test_for_requirements()
-{	
+{
+	echo $1 $2 $3
 	declare -a missing_files;
 #test for kpartx
 	kpartx_file=($( whereis kpartx | awk '{ print $2 }' | grep kpartx ) )
@@ -328,51 +361,77 @@ test_for_requirements()
 	else
 		return 0;
 	fi
+	
 }
 
+####start of copy
+copy_data ()
+{
+	local d= x=
+	local rootfs_copied=
 
-partition_disk $1
-export -f format_disk
-export  -f loop_mount_disk
-export -f umount_delete_loop_device
-su -c 'format_disk '$1
-su -c 'loop_mount_disk '$1' '$2' '$3
-su -c 'umount_delete_loop_device $1'
+	echo "Copy VFAT partition files to SD Card"
+	cp $HWPACKDIR/kernel/uImage $MNTBOOT ||
+		die "Failed to copy VFAT partition data to SD Card"
+	cp $HWPACKDIR/kernel/*.bin $MNTBOOT/script.bin ||
+		die "Failed to copy VFAT partition data to SD Card"
+	if [ -s $HWPACKDIR/kernel/*.scr ]; then
+		cp $HWPACKDIR/kernel/*.scr $MNTBOOT/boot.scr ||
+			die "Failed to copy VFAT partition data to SD Card"
+	fi
+
+        if [ ${hwpack_update_only} -eq 0 ]; then
+		title "Copy rootfs partition files to SD Card"
+		for x in '' \
+			'binary/boot/filesystem.dir' 'binary'; do
+
+			d="$ROOTFSDIR${x:+/$x}"
+
+			if [ -d "$d/sbin" ]; then
+				rootfs_copied=1
+				cp -a "$d"/* "$MNTROOT" ||
+					die "Failed to copy rootfs partition data to SD Card"
+				break
+			fi
+		done
+
+		[ -n "$rootfs_copied" ] || die "Unsupported rootfs"
+        fi
+
+	title "Copy hwpack rootfs files"
+	# Fedora uses a softlink for lib.  Adjust, if needed.
+	if [ -L $MNTROOT/lib ]; then
+		# Find where it points.  For Fedora, we expect usr/lib.
+		DEST=`/bin/ls -l $MNTROOT/lib | sed -e 's,.* ,,'`
+		if [ "$DEST" = "usr/lib" ]; then
+			d="$HWPACKDIR/rootfs"
+			if [ -d "$d/lib" ]; then
+				mkdir -p "$d/usr/lib/"
+				mv "$d/lib"/* "$d/usr/lib/"
+				rmdir "$d/lib"
+			fi
+		fi
+	fi
+        cp -a $HWPACKDIR/rootfs/* $MNTROOT/ ||
+		die "Failed to copy rootfs hwpack files to SD Card"
+}
+#####end of copy
+# execute first parameter as function, pass the remaining
+# arguments to the function
+FUNC=$1
+shift
+$FUNC $@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#partition_disk $1
+#export -f format_disk
+#export -f loop_mount_disk
+#export -f umount_delete_loop_device
+#export -f test_for_requirements
+#su -c 'format_disk '$1
+#su -c 'loop_mount_disk '$1' '$2' '$3
+#su -c 'umount_delete_loop_device $1'
 
 
 
