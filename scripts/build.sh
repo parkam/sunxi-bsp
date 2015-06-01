@@ -1,7 +1,8 @@
 #!/bin/bash
+#Author Pamenas 
+#
 
-
-part1_start="0"
+part1_start="1"
 part1_end="50"
 part2_start=" "
 part2_end=" "
@@ -16,7 +17,7 @@ partition_disk()
 		printf "Error: Disk %s not found.\n" $1;
 		return 1;
 	fi
-	printf $SPRINTF_ARGS | sfdisk  $1 -uM 
+	printf $SPRINTF_ARGS | sfdisk  $1 -uM &> /dev/null
 }
 #This function formats a disk by using device mapping setup by kpartx
 #and then formats the loops that kpartx setup at /dev/mapper/loop*
@@ -109,7 +110,66 @@ loop_mount_disk()
 	
 }
 
+umount_delete_loop_device()
+{
 
+	declare -a local loop_devices;
+	declare -a local  filtered_devices; #device files that can only be associated with disk file
+	declare -a local possible_device_nodes; #nodes that were setup for mounting
+	declare -a local mounted_device_nodes; #nodes that were mounted
+	declare -a local to_unmount;
+	local file_disk
+	file_disk=$1 
+	#search for all loop devices
+	
+	filtered_devices=($( kpartx -l $file_disk  | awk '{print $1 }' | grep 'loop[0-9]p[0-9]'))
+	loop_devices=($( losetup -a | grep "/dev/mapper" )) #get all loop devices in the system
+	mounted_device_nodes=($( cat /proc/mounts | grep "/dev/loop" | awk '{print $1}'  ))
+
+	#check whether mounted nodes in loop devices belong to our file
+	
+
+	
+	for loop_device in ${filtered_devices[@]}; do
+		for node in ${mounted_device_nodes[@]}; do
+			echo "node $node"			
+			temp=$( losetup -a | grep "/dev/mapper/$loop_device" | awk '{print $1}' );
+			temp=${temp%":"}
+			echo "temp $temp"
+			if [[ $temp == $node ]];then
+				to_unmount[${#to_unmount[@]}]=$temp;
+				echo "found node $temp"
+				break;
+			fi
+		done	
+	done
+	
+	if [[ ${#to_unmount[@]} == 0 ]] &&  $( losetup -a | grep $1 &> /dev/null ) ; then
+		echo "No devices to unmount";
+	fi
+
+	for node in  ${to_unmount[@]}; do
+			echo "unmounting device $node";	
+			umount $node	
+	done
+	
+	if  [[ ${#to_unmount[@]} > 0 ]] || $( losetup -a | grep $1 &> /dev/null )  ; then
+		echo "Deleting loop devices for $1"
+		sleep 1
+		kpartx -sd $1
+	fi
+		
+		
+}
+
+is_file_loop_setup()
+{
+	if $( losetup -a | grep $1 &> /dev/null  ) ; then
+		return 0;
+	else
+		return 1;
+	fi
+}
 
 delete_plymouth_files()
 {
@@ -150,6 +210,25 @@ install_uboot_spl()
 	fi
 	return 1;	
 }
+menu()
+{
+	opt_type="" #can be development or production
+	output_file_size="" #size of rootfs
+	output_directory="" #location of the files after work
+	
+	printf "Do you want a development or a production system?\nEnter p for production , d for development\n"
+	read opt_type 
+	printf "What size do you want for the rootfs , enter for default(2GB) in GBs?\n"
+	read output_file_size
+	printf "Choose your output directory, default in pwd?\n"
+	read output_directory
+
+#	echo $output_directory $opt_type $output_file_size
+ 	r_array=( $output_directory $opt_type $output_file_size )
+	1=$r_array
+	echo $(( $output_file_size * 100))
+	return ${r_array[@]}
+}	
 
 clone_patch_compile_uboot()
 {
@@ -170,9 +249,92 @@ clone_patch_compile_uboot()
 	return 0 
 }
 
+check_if_filedisk_mounted()
+{
+	declare -a loop_devices;
+	declare -a unmounted_loops;
+	declare -a difference;
+	declare -a devices_of_interest
+
+	mounted_loops=($( cat /proc/mounts | awk '/\/dev\/loop/  {print $1}'  ))
+	loop_devices=$( losetup -a | grep "/dev/mapper/") 
+	device_postfix=($( losetup -a | grep "/dev/loop"  | grep $1 | awk 'gsub(":","") {print $1} ' | awk 'gsub("/dev/","")' ))
+	
+
+	if [ "$device_postfix" = "" ];then
+		echo "";
+		return 0;
+	fi
+
+	mapping=($( ls /dev/mapper | grep $device_postfix ))
+	
+
+	for device in ${mapping[@]};do 
+		if [ -z $device ] ; then 
+			echo "empty";
+			continue;
+		fi
+		to_search=($(losetup -a | grep "$device" | awk 'gsub(":","") {print $1} '))
+		
+		found=0
+		
+		for x in ${mounted_loops[@]};do
+			if [ "$x" = "$to_search" ]; then
+				found=1;
+				break;
+			fi
+		done
+		
+		if [[ $found == 0 ]]; then
+			unmounted_loops[${#unmounted_loops[@]}]="/dev/mapper/"$device;
+		fi	
+	done
+	
+	
+	echo ${unmounted_loops[@]}	
+}
 partition_disk $1
 export -f format_disk
 export  -f loop_mount_disk
+export -f umount_delete_loop_device
 su -c 'format_disk '$1
 su -c 'loop_mount_disk '$1' '$2' '$3
+su -c 'umount_delete_loop_device $1'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
