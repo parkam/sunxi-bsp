@@ -293,6 +293,44 @@ check_if_filedisk_mounted()
 	
 	echo ${unmounted_loops[@]}	
 }
+
+
+
+test_for_requirements()
+{	
+	declare -a missing_files;
+#test for kpartx
+	kpartx_file=($( whereis kpartx | awk '{ print $2 }' | grep kpartx ) )
+#test for losetup
+	losetup_file=($( whereis losetup | awk '{ print $2 }' | grep losetup ) )
+#test for sfdisk
+	sfdisk_file=($( whereis sfdisk | awk '{ print $2 }' | grep sfdisk ) )
+#test for mkfs
+	mkfs_file=($( whereis mkfs | awk '{ print $2 }' | grep mkfs ) )
+	
+	if ! [[ -x $kpartx_file ]] ; then
+		missing_files[${#missing_files[@]}]="kpartx";
+		
+	fi
+	if  ! [[ -x $losetup_file ]] ; then
+		missing_files[${#missing_files[@]}]="losetup";
+	fi
+	if ! [[ -x $sfdisk_file ]] ; then
+		missing_files[${#missing_files[@]}]="sfdisk";
+	fi
+	if ! [[ -x $mkfs_file ]] ; then
+		missing_files[${#missing_files[@]}]="mkfs";
+	fi
+	if [[ ${#missing_files[@]} > 0 ]]; then
+		echo "Please install the following programs inorder to continue ";
+		echo ":${missing_files[@]}";
+		return 1;
+	else
+		return 0;
+	fi
+}
+
+
 partition_disk $1
 export -f format_disk
 export  -f loop_mount_disk
