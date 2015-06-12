@@ -95,7 +95,7 @@ MNTROOT="/tmp/mnt_root"
 HWPACKDIR="/tmp/hwpack"
 ROOTFSDIR="/tmp/rootfs"
 
-filedisk: #$(HWPACK)
+filedisk: $(HWPACK)
     
 	scripts/build.sh test_for_requirements
 	
@@ -111,14 +111,14 @@ filedisk: #$(HWPACK)
 	
 	$(Q)$(SUDO) scripts/build.sh loop_mount_disk $(FILEDISK_IMG) $(MNTBOOT) $(MNTROOT)
 	
-	-$(Q)$(SUDO) scripts/build.sh extract $(HWPACK) $(HWPACKDIR)
+	$(Q)$(SUDO) scripts/build.sh extract $(HWPACK) $(HWPACKDIR)
 	
-	-$(Q)$(SUDO) scripts/build.sh extract $(ROOTFS) "$(ROOTFSDIR)/"
+	$(Q)$(SUDO) scripts/build.sh extract $(ROOTFS) "$(ROOTFSDIR)/"
 	
-	-$(Q)$(SUDO) scripts/build.sh install_uboot_spl "$(HWPACKDIR)/bootloader/u-boot-sunxi-with-spl.bin" $(FILEDISK_IMG)
+	$(Q)$(SUDO) scripts/build.sh install_uboot_spl "$(HWPACKDIR)/bootloader/u-boot-sunxi-with-spl.bin" $(FILEDISK_IMG)
 	@echo "Copy Data"
 	
-	-$(Q)$(SUDO) scripts/build.sh copy_data $(HWPACKDIR) $(MNTROOT) $(MNTBOOT) $(ROOTFSDIR)
+	$(Q)$(SUDO) scripts/build.sh copy_data $(HWPACKDIR) $(MNTROOT) $(MNTBOOT) $(ROOTFSDIR)
 	@echo "Unmount"
 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
 	

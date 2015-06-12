@@ -256,7 +256,7 @@ copy_boot_files()
 install_uboot_spl()
 {
 	if [ -a $1 ] && [ -a $2 ]; then
-		echo "Installing $2 to $1"
+		echo "Installing $1 to $2"
 		sudo dd if=$1 of=$2 bs=1024 conv=notrunc seek=8
 		if (( $? == 0 )) ; then
 			echo "succeeded in installing uboot";
