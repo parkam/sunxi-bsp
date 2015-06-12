@@ -34,7 +34,7 @@ tools: sunxi-tools/.git
 $(U_CONFIG_H): u-boot-sunxi/.git
 	$(Q)mkdir -p $(U_O_PATH)
 	$(Q)$(MAKE) -C u-boot-sunxi $(UBOOT_CONFIG)_config O=$(U_O_PATH) CROSS_COMPILE=$(CROSS_COMPILE) -j$J
-
+	
 u-boot: $(U_CONFIG_H)
 	-patch --forward -p1 -d u-boot-sunxi < patches/uboot-delay0.patch || echo "Already patched...."
 	
@@ -106,15 +106,17 @@ filedisk:# $(HWPACK)
 	mkdir -p $(MNTBOOT)
 	mkdir -p $(MNTROOT)
 	
- 	$(Q)$(SUDO) scripts/build.sh loop_mount_disk $(FILEDISK_IMG) $(MNTBOOT) $(MNTROOT)
+	$(Q)$(SUDO) scripts/build.sh loop_mount_disk $(FILEDISK_IMG) $(MNTBOOT) $(MNTROOT)
 	
- 	$(Q)$(SUDO) scripts/build.sh extract $(HWPACK) $(HWPACKDIR)
+	-$(Q)$(SUDO) scripts/build.sh extract $(HWPACK) $(HWPACKDIR)
 	
- 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
- 	$(Q)$(SUDO) scripts/build.sh install_uboot_spl $(HWPACK_DIR/bootloader/u-boot-sunxi-with-spl.bin)
- 	
- 	$(Q)$(SUDO) scripts/build.sh copy_data
+	-$(Q)$(SUDO) scripts/build.sh install_uboot_spl $(HWPACK_DIR/bootloader/u-boot-sunxi-with-spl.bin) $(FILEDISK_IMG)
 	
+	-$(Q)$(SUDO) scripts/build.sh copy_data
+	
+	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
+	
+removeloops:
 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
 	
 libs: cedarx-libs/.git

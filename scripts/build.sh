@@ -76,6 +76,7 @@ format_disk()
 # loop_mount_disk <filedisk-image> <boot-mount-point> <root-mount-point>
 loop_mount_disk()
 {
+	echo "loop_mount_disk called with $@"
 	l_pnode=""
 	l_p1=""
 	l_p2=""
@@ -83,7 +84,6 @@ loop_mount_disk()
 	l_2format="ext3"
 	l_pnode=$1
 	l_loops=($( kpartx -l $l_pnode  | awk '{print $1 }' | grep 'loop[0-9]p[0-9]'))
-	echo $?
 	l_loop_count=${#l_loops[@]}
 	l_loop1=""
 	l_loop2=""
@@ -158,9 +158,13 @@ umount_delete_loop_device()
 	loop_devices=$( losetup -a | grep "/dev/mapper/") 
 	device_postfix=($( losetup -a | grep "/dev/loop"  | grep $1 | awk 'gsub(":","") {print $1} ' | awk 'gsub("/dev/","")' ))
 	
+	echo "Mounted Loops $mounted_loops"
+	echo "Loop devices $loop_devices"
+	echo "Device postfix $device_postfix"
+	
 
 	if [ "$device_postfix" = "" ];then
-		echo "";
+		echo "Nothing to unmount/delete";
 		return 0;
 	fi
 
@@ -173,8 +177,6 @@ umount_delete_loop_device()
 			continue;
 		fi
 		to_search=($(losetup -a | grep "$device" | awk 'gsub(":","") {print $1} '))
-		
-		
 		
 		for x in ${mounted_loops[@]};do
 			if [ "$x" = "$to_search" ]; then
@@ -231,7 +233,7 @@ copy_boot_files()
 #installs the u-boot file to rfs image file.
 install_uboot_spl()
 {
-	if [ -a $1 && -a $2 ]; then
+	if [[ -a $1 && -a $2 ]] ; then
 		echo "Installing $2 to $1";
 		if ((dd if=$2 of=$2 bs=1024 conv=notrunc seek=8)); then
 			echo "succeeded in installing uboot";
