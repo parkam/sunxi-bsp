@@ -32,6 +32,7 @@ tools: sunxi-tools/.git
 
 ## u-boot
 $(U_CONFIG_H): u-boot-sunxi/.git
+	@echo $U_CONFIG_H
 	$(Q)mkdir -p $(U_O_PATH)
 	$(Q)$(MAKE) -C u-boot-sunxi $(UBOOT_CONFIG)_config O=$(U_O_PATH) CROSS_COMPILE=$(CROSS_COMPILE) -j$J
 	
@@ -92,17 +93,19 @@ hwpack-install: $(HWPACK)
 MNTBOOT="/tmp/mnt_boot"
 MNTROOT="/tmp/mnt_root"
 HWPACKDIR="/tmp/hwpack"
-filedisk:# $(HWPACK)
+ROOTFSDIR="/tmp/rootfs"
+
+filedisk: #$(HWPACK)
     
 	scripts/build.sh test_for_requirements
 	
-	#@echo "Creating file disk image $(FILEDISK_IMG)"
+	@echo "Creating file disk image $(FILEDISK_IMG)"
 	# create the image-file
-	#dd if=/dev/zero of=$(FILEDISK_IMG) bs=1M count=1K
+	dd if=/dev/zero of=$(FILEDISK_IMG) bs=1M count=1K
 	
-	#scripts/build.sh partition_disk $(FILEDISK_IMG)
-	#$(Q)$(SUDO) scripts/build.sh format_disk $(FILEDISK_IMG)
-
+	scripts/build.sh partition_disk $(FILEDISK_IMG)
+	$(Q)$(SUDO) scripts/build.sh format_disk $(FILEDISK_IMG)
+	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
 	mkdir -p $(MNTBOOT)
 	mkdir -p $(MNTROOT)
 	
@@ -110,10 +113,13 @@ filedisk:# $(HWPACK)
 	
 	-$(Q)$(SUDO) scripts/build.sh extract $(HWPACK) $(HWPACKDIR)
 	
-	-$(Q)$(SUDO) scripts/build.sh install_uboot_spl $(HWPACK_DIR/bootloader/u-boot-sunxi-with-spl.bin) $(FILEDISK_IMG)
+	-$(Q)$(SUDO) scripts/build.sh extract $(ROOTFS) "$(ROOTFSDIR)/"
 	
-	-$(Q)$(SUDO) scripts/build.sh copy_data
+	-$(Q)$(SUDO) scripts/build.sh install_uboot_spl "$(HWPACKDIR)/bootloader/u-boot-sunxi-with-spl.bin" $(FILEDISK_IMG)
+	@echo "Copy Data"
 	
+	-$(Q)$(SUDO) scripts/build.sh copy_data $(HWPACKDIR) $(MNTROOT) $(MNTBOOT) $(ROOTFSDIR)
+	@echo "Unmount"
 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
 	
 removeloops:
@@ -137,6 +143,7 @@ update:
 	$(Q)git submodule update --depth=1 $* 
 
 help:
+	@echo "$(U_CONFIG_H)"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make hwpack          - Default 'make'"

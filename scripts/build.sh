@@ -3,7 +3,7 @@
 #
 
 part1_start="1"
-part1_end="50"
+part1_end="100"
 part2_start=" "
 part2_end=" "
 
@@ -17,7 +17,7 @@ partition_disk()
 		printf "Error: Disk %s not found.\n" $1;
 		return 1;
 	fi
-	printf $SPRINTF_ARGS | sfdisk  $1 -uM &> /dev/null
+	printf $SPRINTF_ARGS | sudo sfdisk  $1 -uM &> /dev/null
 }
 #This function formats a disk by using device mapping setup by kpartx
 #and then formats the loops that kpartx setup at /dev/mapper/loop*
@@ -47,17 +47,17 @@ format_disk()
 	fi	
  		echo $l_loop1  $l_loop2 
 		echo "before kpartx" $1
-	if $(kpartx -a $1); then
+	if $(sudo kpartx -a $1); then
 
 		echo "Kpartx succeeded setting up";
 		
 		echo "Formating partition one using "$l_1format;
-		mkfs.$l_1format /dev/mapper/$l_loop1;
+		sudo mkfs.$l_1format /dev/mapper/$l_loop1;
 		r_v1=$?
 		echo "Formating partition two using "$l_2format;
-		mkfs.$l_2format /dev/mapper/$l_loop2;
+		sudo mkfs.$l_2format /dev/mapper/$l_loop2;
 		r_v2=$?		
-		kpartx -d $l_pnode
+		sudo kpartx -d $l_pnode
 		
 		rval=( $r_v1 -eq 0 -a $r_v2 -eq 0 )
 		echo $rval
@@ -70,6 +70,33 @@ format_disk()
 	fi
 	return 1;
 }
+
+die() {
+	echo "$*" >&2
+	exit 1
+}
+
+title() {
+	echo
+	echo "==="
+	echo "=== $* ==="
+	echo "==="
+}
+
+
+#
+# check if the loop file is already set up.
+# return 0 if it is, and 1 if not
+#
+is_file_loop_setup()
+{
+	if $( losetup -j  $1 | grep $1 &> /dev/null  ) ; then
+		return 0;
+	else
+		return 1;
+	fi
+}
+
 
 #
 # usage:
@@ -87,6 +114,13 @@ loop_mount_disk()
 	l_loop_count=${#l_loops[@]}
 	l_loop1=""
 	l_loop2=""
+	
+	
+	is_file_loop_setup $1
+	if (( $? == 0 )) ; then
+		echo "Loop already mounted, try to unmount first (e.g. make removeloops)"
+		exit 1   
+	fi
 	
 	if (($l_loop_count > 1)); then
 		l_loop1=${l_loops[0]};
@@ -181,28 +215,16 @@ umount_delete_loop_device()
 		for x in ${mounted_loops[@]};do
 			if [ "$x" = "$to_search" ]; then
 				umount $x
-				found=1
 			fi
 		done
 		
 	done
 	
-	if [[ $found == 1 ]]; then
-		echo "Deleting loop devices for $1"
-		sleep 1
-		kpartx -sd $1
-	fi	
-		
-		
-}
-
-is_file_loop_setup()
-{
-	if $( losetup -j  $1 &> /dev/null  ) ; then
-		return 0;
-	else
-		return 1;
-	fi
+	echo "Deleting loop devices for $1"
+	sleep 1
+	sudo kpartx -d $1 || 0
+	sudo kpartx -d /dev/$device_postfix || 0
+	sudo losetup -d /dev/$device_postfix || 0 	
 }
 
 delete_plymouth_files()
@@ -233,14 +255,17 @@ copy_boot_files()
 #installs the u-boot file to rfs image file.
 install_uboot_spl()
 {
-	if [[ -a $1 && -a $2 ]] ; then
-		echo "Installing $2 to $1";
-		if ((dd if=$2 of=$2 bs=1024 conv=notrunc seek=8)); then
+	if [ -a $1 ] && [ -a $2 ]; then
+		echo "Installing $2 to $1"
+		sudo dd if=$1 of=$2 bs=1024 conv=notrunc seek=8
+		if (( $? == 0 )) ; then
 			echo "succeeded in installing uboot";
 			return 0;
 		else
 			echo "failed to install uboot";
 		fi;
+	else
+		echo "uboot_spl or filedisk-image not present"
 	fi
 	return 1;	
 }
@@ -366,12 +391,16 @@ test_for_requirements()
 	
 }
 
-####start of copy
+#start of copy
 copy_data ()
 {
 	local d= x=
 	local rootfs_copied=
-
+	local HWPACKDIR=$1
+	local MNTROOT=$2
+	local MNTBOOT=$3
+	local ROOTFSDIR=$4
+	
 	echo "Copy VFAT partition files to SD Card"
 	cp $HWPACKDIR/kernel/uImage $MNTBOOT ||
 		die "Failed to copy VFAT partition data to SD Card"
@@ -382,7 +411,7 @@ copy_data ()
 			die "Failed to copy VFAT partition data to SD Card"
 	fi
 
-        if [ ${hwpack_update_only} -eq 0 ]; then
+    if [[ ${hwpack_update_only} -eq 0 ]]; then
 		title "Copy rootfs partition files to SD Card"
 		for x in '' \
 			'binary/boot/filesystem.dir' 'binary'; do
