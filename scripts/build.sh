@@ -5,9 +5,7 @@
 part1_start="1"
 part1_end="100"
 part2_start=" "
-part2_end=" "
-
-SPRINTF_ARGS="%s,%s;\n%s,%s;\n;\n;\nEOF "$part1_start" "$part1_end" "$part2_start" "$part2_end
+part2_end="-1s"
 
 partition_disk()
 {
@@ -17,7 +15,9 @@ partition_disk()
 		printf "Error: Disk %s not found.\n" $1;
 		return 1;
 	fi
-	printf $SPRINTF_ARGS | sudo sfdisk  $1 -uM &> /dev/null
+	parted -s $1 mklabel msdos
+	parted -s $1 mkpart p $part1_start $part1_end
+	parted -s $1 -- mkpart p $part1_end $part2_end
 }
 #This function formats a disk by using device mapping setup by kpartx
 #and then formats the loops that kpartx setup at /dev/mapper/loop*
