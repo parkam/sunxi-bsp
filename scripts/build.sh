@@ -15,9 +15,21 @@ partition_disk()
 		printf "Error: Disk %s not found.\n" $1;
 		return 1;
 	fi
-	parted -s $1 mklabel msdos
-	parted -s $1 mkpart p $part1_start $part1_end
-	parted -s $1 -- mkpart p $part1_end $part2_end
+	if (( parted -s $1 mklabel msdos )); then
+		echo "created msdos disk label for $1"
+	else
+		echo "failed to create disk label for $1"
+	fi
+	if(( parted -s $1 mkpart p $part1_start $part1_end )); then
+		echo "created partition 1 on $1"
+	else
+		echo "failed to create partion 1 on $1"
+	fi
+	if(( parted -s $1 -- mkpart p $part1_end $part2_end ));then
+		echo "created partition 2 on $1"
+	else
+		echo "failed to creat partion 2 on $1"
+	fi
 }
 #This function formats a disk by using device mapping setup by kpartx
 #and then formats the loops that kpartx setup at /dev/mapper/loop*
