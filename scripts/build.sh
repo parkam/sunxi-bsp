@@ -376,7 +376,7 @@ test_for_requirements()
 #test for losetup
 	losetup_file=($( whereis losetup | awk '{ print $2 }' | grep losetup ) )
 #test for sfdisk
-	sfdisk_file=($( whereis sfdisk | awk '{ print $2 }' | grep sfdisk ) )
+	parted_file=($( whereis sfdisk | awk '{ print $2 }' | grep sfdisk ) )
 #test for mkfs
 	mkfs_file=($( whereis mkfs | awk '{ print $2 }' | grep mkfs ) )
 	
@@ -387,8 +387,8 @@ test_for_requirements()
 	if  ! [[ -x $losetup_file ]] ; then
 		missing_files[${#missing_files[@]}]="losetup";
 	fi
-	if ! [[ -x $sfdisk_file ]] ; then
-		missing_files[${#missing_files[@]}]="sfdisk";
+	if ! [[ -x $parted_file ]] ; then
+		missing_files[${#missing_files[@]}]="parted";
 	fi
 	if ! [[ -x $mkfs_file ]] ; then
 		missing_files[${#missing_files[@]}]="mkfs";
