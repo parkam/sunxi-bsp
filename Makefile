@@ -123,8 +123,9 @@ filedisk: $(HWPACK)
 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
 	
 removeloops:
-	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
-	
+	$(Q)$(SUDO) scripts/build.sh optimize
+optimize:
+	$(Q)$(SUDO) scripts/build.sh  $(FILEDISK_IMG)
 libs: cedarx-libs/.git
 
 update:
