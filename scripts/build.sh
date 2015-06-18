@@ -239,6 +239,8 @@ umount_delete_loop_device()
 	sudo losetup -d /dev/$device_postfix || 0 	
 }
 
+#usage
+#delete_plymouth_files <root_file_system_dir>
 delete_plymouth_files()
 {
 	r_dir=$1
@@ -250,18 +252,48 @@ delete_plymouth_files()
 }
 #This function extracts archived boot files to boot directory
 #argument 1 is boot directory to install , argument two is the archive files
-#
+#usage copy_boot_files <boot dir> <source of boot files dir>
 copy_boot_files()
 {
 	b_dir=$1
 	if [[ -d $b_dir ]]; then
-		if ((tar -xvf $2 -C $b_dir)) ; then 
+		if (( cp $3/* $1)) ; then 
 			echo "Succeeded in copying boot files";
 			return 0;
 		fi;
 	fi
 		echo "Failed to copy boot files to $1"
 	return 1;
+}
+
+#usage
+#optimize <bootdir><rfsdir><extra-config_dir>
+optimize()
+
+	delete_plymouth_files $2 
+	copy_boot_files $1 $2 $3
+}
+
+change_root()
+{
+	local rfs=$1
+	local boot=$2
+	local script=$3
+	local qemu_arm_bin
+	qemu_arm_bin=$(whereis qemu-arm-static)
+	if [ -a $qemu_arm_bin ]; then
+			sudo cp /usr/bin/qemu-arm-static $rfs/usr/bin/
+	else
+			echo "Please install qemu-arm-static to run this file";
+	fi 
+	
+	mount --bind /dev/ $rfs/dev
+	mount --bind /proc $rfs/proc
+	mount --bind /sys $rfs/sys
+	mount --bind $boot $rfs/boot
+	
+	sudo chroot $rfs/
+	
 }
 #This function takes the rfs image file as argument 1 and u-boot-with-spl-as argument 2 and
 #installs the u-boot file to rfs image file.
