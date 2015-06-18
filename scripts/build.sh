@@ -31,6 +31,73 @@ partition_disk()
 		echo "failed to creat partion 2 on $1"
 	fi
 }
+
+
+writeimage2sd()
+{
+	local image=$1
+	local devfile=$2
+	local partition=$2"2"
+	if [ -a $devfile ] && [ -a $image ] ; then
+		echo "all files exist"
+	else
+		echo "specified file $image or $devfile missing, exiting"
+		exit 1
+	fi
+	
+	echo "dding  $image $devfile"
+	
+	dd if=$image of=$devfile bs=1M 
+	
+	if (( $? == 0 )); then
+		echo "successfully dd image to sd"
+	else
+		echo "error in dding image, exiting"
+		exit 1
+	fi
+	
+	input = $(debugfs -R "feature" $partition )
+	IFS=' ' read -a features <<< "$input"
+	
+	cmd_args=""
+	device=$1"2"
+
+	input=$( debugfs -R "feature" $device )
+	IFS=' ' read -a features <<< "$input"
+	cmd_args=" "
+	for val in ${features[@]:2} ; do
+		cmd_args="$cmd_args -$val "
+		echo $val
+	done
+	cmd_args="$cmd_args   "
+
+	echo "tune2fs: removing journal from filesystem"
+	tune2fs -O^has_journal  $device
+	
+	echo "debugfs: removing filesystem features"
+	debugfs -w -R  "feature $cmd_args"  $device
+	
+	echo "parted: resizing partition $1"
+	parted -s $1 resizepart 2  95% 
+	cmd_args=" "
+	
+	for val in ${features[@]:2}; do
+		cmd_args=$cmd_args" "$val;
+	done
+ 
+	
+	echo "debugfs restoring features to filesystem"
+	debugfs -w -R "feature $cmd_args"   $device
+	tune2fs -O has_journal $device
+	echo "resizes2fs: resizing the filesystem"
+	resize2fs $device
+	echo "parted: creating a linux swap partition"
+	parted -s $1 mkpartfs p  linux-swap  95% 100%
+	
+	return $?
+
+}
+
 #This function formats a disk by using device mapping setup by kpartx
 #and then formats the loops that kpartx setup at /dev/mapper/loop*
 #subsequently unmounts the disk
@@ -272,6 +339,19 @@ optimize()
 {
 	delete_plymouth_files $2 
 	copy_boot_files $1 $2 $3
+	
+	echo "# /etc/modules: kernel modules to load at boot time.
+	#
+	# This file contains the names of kernel modules that should be loaded
+	# at boot time, one per line. Lines beginning with "#" are ignored.	
+	
+	#For SATA Support
+	sw_ahci_platform
+	8192cu
+	" > $2/etc/modules
+	
+	#delete not needed ttys 
+	rm -rf $2/etc/init/tty[4-9].conf
 }
 
 change_root()
@@ -510,6 +590,8 @@ $FUNC $@
 #su -c 'format_disk '$1
 #su -c 'loop_mount_disk '$1' '$2' '$3
 #su -c 'umount_delete_loop_device $1'
+
+
 
 
 
