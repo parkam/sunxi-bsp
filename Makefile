@@ -125,6 +125,9 @@ filedisk: $(HWPACK)
 removeloops:
 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
 optimize:
+	mkdir -p $(MNTBOOT)
+	mkdir -p $(MNTROOT)
+
 	$(Q)$(SUDO) scripts/build.sh loop_mount_disk $(FILEDISK_IMG) $(MNTBOOT) $(MNTROOT)
 	$(Q)$(SUDO) scripts/build.sh optimize  $(MNTBOOT) $(MNTROOT) ./extra-config/
 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)

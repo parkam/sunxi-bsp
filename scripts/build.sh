@@ -269,7 +269,7 @@ copy_boot_files()
 #usage
 #optimize <bootdir><rfsdir><extra-config_dir>
 optimize()
-
+{
 	delete_plymouth_files $2 
 	copy_boot_files $1 $2 $3
 }
