@@ -133,6 +133,14 @@ optimize:
 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
 libs: cedarx-libs/.git
 
+changeroot:
+	mkdir -p $(MNTBOOT)
+	mkdir -p $(MNTROOT)
+
+	$(Q)$(SUDO) scripts/build.sh loop_mount_disk $(FILEDISK_IMG) $(MNTBOOT) $(MNTROOT)
+	$(Q)$(SUDO) scripts/build.sh change_root $(MNTBOOT) $(MNTROOT)
+	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)	
+
 update:
 	$(Q)git stash
 	$(Q)git pull --rebase
