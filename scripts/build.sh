@@ -458,6 +458,33 @@ copy_data ()
         cp -a $HWPACKDIR/rootfs/* $MNTROOT/ ||
 		die "Failed to copy rootfs hwpack files to SD Card"
 }
+
+
+delete_plymouth_files()
+{
+	r_dir=$1
+	if [-d $r_dir ];then
+		rm -rf $r_dir/etc/init/plymouth*
+		return $?;
+	fi
+	return 1;
+}
+#This function extracts archived boot files to boot directory
+#argument 1 is boot directory to install , argument two is the archive files
+#
+copy_boot_files()
+{
+	b_dir=$1
+	if [[ -d $b_dir ]]; then
+		if ((tar -xvf $2 -C $b_dir)) ; then 
+			echo "Succeeded in copying boot files";
+			return 0;
+		fi;
+	fi
+		echo "Failed to copy boot files to $1"
+	return 1;
+}
+
 #####end of copy
 # execute first parameter as function, pass the remaining
 # arguments to the function
