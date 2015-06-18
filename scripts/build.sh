@@ -56,13 +56,13 @@ writeimage2sd()
 		exit 1
 	fi
 	
-	input = $(debugfs -R "feature" $partition )
+	input=$(debugfs -R "feature" $partition )
 	IFS=' ' read -a features <<< "$input"
 	
 	cmd_args=""
-	device=$1"2"
 
-	input=$( debugfs -R "feature" $device )
+
+	input=$( debugfs -R "feature" $partition )
 	IFS=' ' read -a features <<< "$input"
 	cmd_args=" "
 	for val in ${features[@]:2} ; do
@@ -70,15 +70,15 @@ writeimage2sd()
 		echo $val
 	done
 	cmd_args="$cmd_args   "
-
+i
 	echo "tune2fs: removing journal from filesystem"
-	tune2fs -O^has_journal  $device
+	tune2fs -O^has_journal  $partition
 	
 	echo "debugfs: removing filesystem features"
 	debugfs -w -R  "feature $cmd_args"  $device
 	
 	echo "parted: resizing partition $1"
-	parted -s $1 resizepart 2  95% 
+	parted -s $devfile resizepart 2  95% 
 	cmd_args=" "
 	
 	for val in ${features[@]:2}; do
@@ -87,12 +87,12 @@ writeimage2sd()
  
 	
 	echo "debugfs restoring features to filesystem"
-	debugfs -w -R "feature $cmd_args"   $device
-	tune2fs -O has_journal $device
+	debugfs -w -R "feature $cmd_args"   $partition
+	tune2fs -O has_journal $partition
 	echo "resizes2fs: resizing the filesystem"
-	resize2fs $device
+	resize2fs $partition 
 	echo "parted: creating a linux swap partition"
-	parted -s $1 mkpartfs p  linux-swap  95% 100%
+	parted -s $devfile mkpartfs p  linux-swap  95% 100%
 	
 	return $?
 
@@ -589,9 +589,4 @@ $FUNC $@
 #export -f test_for_requirements
 #su -c 'format_disk '$1
 #su -c 'loop_mount_disk '$1' '$2' '$3
-#su -c 'umount_delete_loop_device $1'
-
-
-
-
-
+#su -c 'umount_delete_loop
