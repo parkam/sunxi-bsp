@@ -311,8 +311,11 @@ umount_delete_loop_device()
 delete_plymouth_files()
 {
 	r_dir=$1
-	if [-d $r_dir ];then
+	if [ -d $r_dir ];then
 		rm -rf $r_dir/etc/init/plymouth*
+		if (( $? == 0 )); then
+			echo "deleted plymouth files"
+		fi
 		return $?;
 	fi
 	return 1;
@@ -323,8 +326,8 @@ delete_plymouth_files()
 copy_boot_files()
 {
 	b_dir=$1
-	if [[ -d $b_dir ]]; then
-		if (( cp $3/* $1)) ; then 
+	if [ -d $b_dir ]; then
+		if  cp $3/* $1  ; then 
 			echo "Succeeded in copying boot files";
 			return 0;
 		fi;
@@ -334,7 +337,7 @@ copy_boot_files()
 }
 
 #usage
-#optimize <bootdir><rfsdir><extra-config_dir>
+#optimize <bootdir> <rfsdir> <extra-config_dir>
 optimize()
 {
 	delete_plymouth_files $2 
@@ -356,17 +359,18 @@ optimize()
 
 change_root()
 {
-	local rfs=$1
-	local boot=$2
+	local boot=$1
+	local rfs=$2
 	local script=$3
 	local qemu_arm_bin
-	qemu_arm_bin=$(whereis qemu-arm-static)
+	qemu_arm_bin=$(whereis qemu-arm-static | awk '{print $2}')
 	if [ -a $qemu_arm_bin ]; then
 			sudo cp /usr/bin/qemu-arm-static $rfs/usr/bin/
 	else
 			echo "Please install qemu-arm-static to run this file";
 	fi 
 	
+	cp /etc/resolv.conf $rfs/etc/resolv.conf
 	mount --bind /dev/ $rfs/dev
 	mount --bind /proc $rfs/proc
 	mount --bind /sys $rfs/sys
@@ -374,7 +378,13 @@ change_root()
 	
 	sudo chroot $rfs/
 	
+	umount $rfs/dev
+	umount $rfs/proc
+	umount $rfs/sys
+	umount $boot $rfs/boot	
+	exit 0
 }
+
 #This function takes the rfs image file as argument 1 and u-boot-with-spl-as argument 2 and
 #installs the u-boot file to rfs image file.
 install_uboot_spl()
@@ -525,18 +535,18 @@ copy_data ()
 	local MNTBOOT=$3
 	local ROOTFSDIR=$4
 	
-	echo "Copy VFAT partition files to SD Card"
+	echo "Copy VFAT partition files to filedisk"
 	cp $HWPACKDIR/kernel/uImage $MNTBOOT ||
-		die "Failed to copy VFAT partition data to SD Card"
+		die "Failed to copy VFAT partition data to filedisk"
 	cp $HWPACKDIR/kernel/*.bin $MNTBOOT/script.bin ||
-		die "Failed to copy VFAT partition data to SD Card"
+		die "Failed to copy VFAT partition data to filedisk"
 	if [ -s $HWPACKDIR/kernel/*.scr ]; then
 		cp $HWPACKDIR/kernel/*.scr $MNTBOOT/boot.scr ||
-			die "Failed to copy VFAT partition data to SD Card"
+			die "Failed to copy VFAT partition data to filedisk"
 	fi
 
     if [[ ${hwpack_update_only} -eq 0 ]]; then
-		title "Copy rootfs partition files to SD Card"
+		title "Copy rootfs partition files to filedisk"
 		for x in '' \
 			'binary/boot/filesystem.dir' 'binary'; do
 
@@ -545,7 +555,7 @@ copy_data ()
 			if [ -d "$d/sbin" ]; then
 				rootfs_copied=1
 				cp -a "$d"/* "$MNTROOT" ||
-					die "Failed to copy rootfs partition data to SD Card"
+					die "Failed to copy rootfs partition data to filedisk"
 				break
 			fi
 		done
@@ -568,7 +578,7 @@ copy_data ()
 		fi
 	fi
         cp -a $HWPACKDIR/rootfs/* $MNTROOT/ ||
-		die "Failed to copy rootfs hwpack files to SD Card"
+		die "Failed to copy rootfs hwpack files to filedisk"
 }
 
 
