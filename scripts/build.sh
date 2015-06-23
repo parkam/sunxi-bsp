@@ -403,25 +403,6 @@ install_uboot_spl()
 	fi
 	return 1;	
 }
-menu()
-{
-	opt_type="" #can be development or production
-	output_file_size="" #size of rootfs
-	output_directory="" #location of the files after work
-	
-	printf "Do you want a development or a production system?\nEnter p for production , d for development\n"
-	read opt_type 
-	printf "What size do you want for the rootfs , enter for default(2GB) in GBs?\n"
-	read output_file_size
-	printf "Choose your output directory, default in pwd?\n"
-	read output_directory
-
-#	echo $output_directory $opt_type $output_file_size
- 	r_array=( $output_directory $opt_type $output_file_size )
-	1=$r_array
-	echo $(( $output_file_size * 100))
-	return ${r_array[@]}
-}	
 
 clone_patch_compile_uboot()
 {
