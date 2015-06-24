@@ -101,7 +101,7 @@ filedisk: $(HWPACK)
 	
 	@echo "Creating file disk image $(FILEDISK_IMG)"
 	# create the image-file
-	dd if=/dev/zero of=$(FILEDISK_IMG) bs=1M count=1K
+	dd if=/dev/zero of=$(FILEDISK_IMG) bs=1M count=1500
 	
 	scripts/build.sh partition_disk $(FILEDISK_IMG)
 	$(Q)$(SUDO) scripts/build.sh format_disk $(FILEDISK_IMG)
