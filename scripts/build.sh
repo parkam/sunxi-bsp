@@ -70,7 +70,7 @@ writeimage2sd()
 		echo $val
 	done
 	cmd_args="$cmd_args   "
-i
+
 	echo "tune2fs: removing journal from filesystem"
 	tune2fs -O^has_journal  $partition
 	
@@ -343,6 +343,13 @@ optimize()
 	delete_plymouth_files $2 
 	copy_boot_files $1 $2 $3
 	
+	echo "## "
+	echo "auto lo eth0" > $2/etc/network/interfaces
+	echo "iface lo inet loopback" >> $2/etc/network/interfaces
+	echo "" >> $2/etc/network/interfaces
+	echo "auto eth0" >> $2/etc/network/interfaces
+	echo "iface eth0 inet dhcp" >> $2/etc/network/interfaces
+
 	echo "# /etc/modules: kernel modules to load at boot time.
 	#
 	# This file contains the names of kernel modules that should be loaded
@@ -370,7 +377,6 @@ change_root()
 			echo "Please install qemu-arm-static to run this file";
 	fi 
 	
-	cp /etc/resolv.conf $rfs/etc/resolv.conf
 	mount --bind /dev/ $rfs/dev
 	mount --bind /proc $rfs/proc
 	mount --bind /sys $rfs/sys
