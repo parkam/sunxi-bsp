@@ -3,22 +3,18 @@ sunxi-bsp
 
 Getting Started
 ---------------
+This branch/fork is optimized for Cubieboard2 boards. It
+might work with other boards, but will most likely fail.
 
-1. Choose a board doing `./configure my_board`, or `./configure` to see
-   the list of supported ones.
+Checkout the repo and *this* branch, then configure and build the filedisk. Finally put it on your
+sd-card
+As with the original BSP, you'll need a root file system, e.g. a linaro or ubuntu.
 
-2. Run 'make' to build hwpack or 'make help' to list available targets
+1. git clone *<repo-url>*
+2. git checkout filedisk
+3. ./configure cubieboard2
+4. make filedisk ROOTFS=*<path-to-rootfs>*
+5. make optimize
+6. dd if=output/filedisk.img of=/dev/sdx bs=1M
 
-
-Overview
---------
-
-This repository provides various scripts to help hacking devices with Allwinner SOC.
-
-  ./scripts/
-    a1x-initramfs.sh          - Create initramfs inside target device
-    mk_ext4_rootfs.sh         - Ext4 rootfs from tar.gz
-    mk_hwpack.sh              - Helper script for Makefile
-    mk_livesuit_img.sh        - Android or Linux livesuit image
-    sunxi-media-create.sh     - Flash SD card from hwpack
-    mk_android.sh             - Helper script for Makefile
+The tasks are organized in the Makefile that will execute the appropriate functions in scripts/.
