@@ -1,18 +1,18 @@
 [submodule "u-boot-sunxi"]
 	path = u-boot-sunxi
-	url = sunxi-linux/u-boot-sunxi.git
+	url = /linux-sunxi/u-boot-sunxi.git
 [submodule "sunxi-tools"]
 	path = sunxi-tools
-	url = sunxi-linux/sunxi-tools.git
+	url = /linux-sunxi/sunxi-tools.git
 [submodule "sunxi-boards"]
 	path = sunxi-boards
-	url = sunxi-linux/sunxi-boards.git
+	url = /linux-sunxi/sunxi-boards.git
 [submodule "linux-sunxi"]
 	path = linux-sunxi
-	url = sunxi-linux/linux-sunxi.git
+	url = /linux-sunxi/linux-sunxi.git
 [submodule "allwinner-tools"]
 	path = allwinner-tools
-	url = sunxi-linux/allwinner-tools.git
+	url = /linux-sunxi/allwinner-tools.git
 [submodule "cedarx-libs"]
 	path = cedarx-libs
-	url = sunxi-linux/cedarx-libs.git
+	url = /linux-sunxi/cedarx-libs.git
