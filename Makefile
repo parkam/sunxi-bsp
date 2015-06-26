@@ -35,10 +35,10 @@ $(U_CONFIG_H): u-boot-sunxi/.git
 	@echo $U_CONFIG_H
 	$(Q)mkdir -p $(U_O_PATH)
 	$(Q)$(MAKE) -C u-boot-sunxi $(UBOOT_CONFIG)_config O=$(U_O_PATH) CROSS_COMPILE=$(CROSS_COMPILE) -j$J
-	
+
 u-boot: $(U_CONFIG_H)
-	-patch --forward -p1 -d u-boot-sunxi < patches/uboot-delay0.patch || echo "Already patched...."
-	
+        #-patch --forward -p1 -d u-boot-sunxi < patches/uboot-delay0.patch || echo "Already patched...."
+
 	$(Q)$(MAKE) -C u-boot-sunxi all O=$(U_O_PATH) CROSS_COMPILE=$(CROSS_COMPILE) -j$J
 
 ## linux
@@ -96,32 +96,31 @@ HWPACKDIR="/tmp/hwpack"
 ROOTFSDIR="/tmp/rootfs"
 
 filedisk: $(HWPACK)
-    
 	scripts/build.sh test_for_requirements
-	
+
 	@echo "Creating file disk image $(FILEDISK_IMG)"
-	# create the image-file
+        # create the image-file
 	dd if=/dev/zero of=$(FILEDISK_IMG) bs=1M count=1500
-	
+
 	scripts/build.sh partition_disk $(FILEDISK_IMG)
 	$(Q)$(SUDO) scripts/build.sh format_disk $(FILEDISK_IMG)
 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
 	mkdir -p $(MNTBOOT)
 	mkdir -p $(MNTROOT)
-	
+
 	$(Q)$(SUDO) scripts/build.sh loop_mount_disk $(FILEDISK_IMG) $(MNTBOOT) $(MNTROOT)
-	
+
 	$(Q)$(SUDO) scripts/build.sh extract $(HWPACK) $(HWPACKDIR)
-	
+
 	$(Q)$(SUDO) scripts/build.sh extract $(ROOTFS) "$(ROOTFSDIR)/"
-	
+
 	$(Q)$(SUDO) scripts/build.sh install_uboot_spl "$(HWPACKDIR)/bootloader/u-boot-sunxi-with-spl.bin" $(FILEDISK_IMG)
 	@echo "Copy Data"
-	
+
 	$(Q)$(SUDO) scripts/build.sh copy_data $(HWPACKDIR) $(MNTROOT) $(MNTBOOT) $(ROOTFSDIR)
 	@echo "Unmount"
 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
-	
+
 removeloops:
 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
 optimize:
@@ -131,10 +130,10 @@ optimize:
 	$(Q)$(SUDO) scripts/build.sh loop_mount_disk $(FILEDISK_IMG) $(MNTBOOT) $(MNTROOT)
 	$(Q)$(SUDO) scripts/build.sh optimize  $(MNTBOOT) $(MNTROOT) ./extra-config/
 	$(Q)$(SUDO) scripts/build.sh umount_delete_loop_device $(FILEDISK_IMG)
-	
+
 write2sd:
 	$(Q)$(SUDO) scripts/build.sh writeimage2sd $(FILEDISK_IMG) $(SD_DEVICEFILE)
-	
+
 libs: cedarx-libs/.git
 
 changeroot:
